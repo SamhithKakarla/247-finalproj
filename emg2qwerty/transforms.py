@@ -256,5 +256,50 @@ class TemporalDownsample:
             "emg_left": data["emg_left"][:: self.factor],
             "emg_right": data["emg_right"][:: self.factor],
         }
-        
+
+@dataclass
+class TimeStretch:
+    max_scale: float = 0.1
+
+    def __call__(self, tensor: torch.Tensor) -> torch.Tensor:
+        # tensor shape: (T, C)
+        T, C = tensor.shape
+
+        scale = 1.0 + np.random.uniform(-self.max_scale, self.max_scale)
+        new_T = int(T * scale)
+
+        # reshape for interpolation
+        x = tensor.T.unsqueeze(0)  # (1, C, T)
+
+        x = torch.nn.functional.interpolate(
+            x,
+            size=new_T,
+            mode="linear",
+            align_corners=False,
+        )
+
+        x = x.squeeze(0).T  # (T', C)
+
+        # keep original length so batching works
+        if x.shape[0] > T:
+            x = x[:T]
+        else:
+            pad = T - x.shape[0]
+            x = torch.nn.functional.pad(x, (0, 0, 0, pad))
+
+        return x
+    
+# Your code
+@dataclass
+class RandomChannelDropout:
+    def __init__(self, drop_prob=0.1, channel_dim=-1):
+        self.drop_prob = drop_prob
+        self.channel_dim = channel_dim
+
+    def __call__(self, tensor):
+        mask = torch.rand(tensor.shape[self.channel_dim]) > self.drop_prob
+        shape = [1] * tensor.ndim
+        shape[self.channel_dim] = -1
+        return tensor * mask.view(*shape)
+            
 #END YOUR CODE HERE =============================================
