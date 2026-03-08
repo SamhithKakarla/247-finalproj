@@ -169,6 +169,7 @@ class MultiBandRotationInvariantMLP(nn.Module):
         return torch.stack(outputs_per_band, dim=self.stack_dim)
 
 
+
 class TDSConv2dBlock(nn.Module):
     """A 2D temporal convolution block as per "Sequence-to-Sequence Speech
     Recognition with Time-Depth Separable Convolutions, Hannun et al"
@@ -211,6 +212,7 @@ class TDSConv2dBlock(nn.Module):
 
         # Layer norm over C
         return self.layer_norm(x)  # TNC
+
 
 
 class TDSFullyConnectedBlock(nn.Module):
@@ -278,3 +280,52 @@ class TDSConvEncoder(nn.Module):
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         return self.tds_conv_blocks(inputs)  # (T, N, num_features)
+
+# YOUR CODE HERE ==============================
+
+class CNNGRUEncoder(nn.Module):
+    """A CNN + GRU hybrid encoder"""
+
+    def __init__(
+        self,
+        num_features: int,
+        block_channels: Sequence[int],
+        kernel_width: int,
+        gru_hidden_size: int,
+        gru_layers: int,
+        gru_dropout: float = 0.2,
+    ) -> None:
+        super().__init__()
+
+        # CNN front-end
+        self.cnn = TDSConvEncoder(
+            num_features=num_features,
+            block_channels=block_channels,
+            kernel_width=kernel_width,
+        )
+
+        # GRU back-end
+        self.gru = nn.GRU(
+            input_size=num_features,
+            hidden_size=gru_hidden_size,
+            num_layers=gru_layers,
+            bidirectional=True,
+            batch_first=False,   
+            dropout=gru_dropout if gru_layers > 1 else 0.0,
+        )
+
+       
+        self.proj = nn.Linear(gru_hidden_size * 2, num_features)
+        self.norm = nn.LayerNorm(num_features)
+
+    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+       
+        x = self.cnn(inputs)      
+        x, _ = self.gru(x)       
+
+        x = self.proj(x)           
+        x = self.norm(x)           
+
+        return x
+
+# END YOUR CODE HER =======================================

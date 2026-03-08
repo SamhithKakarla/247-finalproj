@@ -243,3 +243,18 @@ class SpecAugment:
 
         # (..., C, freq, T) -> (T, ..., C, freq)
         return x.movedim(-1, 0)
+
+#YOUR CODE HERE=============================
+
+@dataclass
+class TemporalDownsample:
+    factor: int
+
+    def __call__(self, data: np.ndarray) -> dict:
+        
+        return {
+            "emg_left": data["emg_left"][:: self.factor],
+            "emg_right": data["emg_right"][:: self.factor],
+        }
+        
+#END YOUR CODE HERE =============================================
