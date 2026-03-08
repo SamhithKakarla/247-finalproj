@@ -461,4 +461,62 @@ class CNNPyramidalLSTMEncoder(nn.Module):
         return x
 
 
+class CNNTransformerEncoder(nn.Module):
+    def __init__(
+        self,
+        num_features: int,
+        block_channels: Sequence[int],
+        kernel_width: int,
+        max_seq_len: int = 1000,
+        transformer_layers: int = 2,
+        transformer_heads: int = 2,
+        dim_feedforward: int = 128,
+        dropout: float = 0.1,
+    ):
+        super().__init__()
+        self.num_features = num_features
+
+        # --- Small conv block to reduce T and extract local patterns ---
+        self.cnn = TDSConvEncoder(
+            num_features=num_features,
+            block_channels=block_channels,
+            kernel_width=kernel_width,
+        )
+
+        # --- Transformer ---
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model=num_features,
+            nhead=transformer_heads,
+            dim_feedforward=dim_feedforward,
+            dropout=dropout,
+            batch_first=True,
+        )
+        self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=transformer_layers)
+
+        # Positional encoding after conv downsampling
+        self.positional_encoding = nn.Parameter(0.01 * torch.randn(max_seq_len, 1, num_features))
+        self.output_norm = nn.LayerNorm(num_features)
+
+    def forward(self, x):
+        T, N, F_in = x.shape
+        x_ = self.cnn(x)  # (T_down, N, num_features)
+        T_down = x_.shape[0]
+
+        pe = self.positional_encoding  # (max_seq_len, 1, num_features)
+
+        if T_down <= pe.shape[0]:
+            # Slice for shorter sequence
+            x_ = x_ + pe[:T_down]  # broadcasting along batch dimension
+        else:
+            # Repeat for longer sequence
+            repeat_factor = (T_down + pe.shape[0] - 1) // pe.shape[0]  # ceil div
+            pe_extended = pe.repeat(repeat_factor, N, 1)[:T_down, :N, :]
+            x_ = x_ + pe_extended
+
+        x_ = x_.permute(1, 0, 2)  # (N, T_down, num_features)
+        out = self.transformer(x_)
+        out = self.output_norm(out)
+        return out.permute(1, 0, 2)
+
+
 # END YOUR CODE HERE =======================================
