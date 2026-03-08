@@ -25,11 +25,25 @@ specaug:
   n_freq_masks: 2
   freq_mask_param: 4
 
+time_stretch:
+  _target_: emg2qwerty.transforms.ForEach
+  transform:
+    _target_: emg2qwerty.transforms.TimeStretch
+    max_scale: 0.1
+
+channel_dropout:
+  _target_: emg2qwerty.transforms.ForEach
+  transform:
+    _target_: emg2qwerty.transforms.RandomChannelDropout
+    drop_prob: 0.1
+
+
 transforms:
   train:
     - ${to_tensor}
     - ${band_rotation}
     - ${temporal_jitter}
+    - ${time_stretch}
     - ${logspec}
     - ${specaug}
 
