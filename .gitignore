@@ -1,3 +1,5 @@
+models/*.ckpt
+
 # Swap files
 *.sw*
 

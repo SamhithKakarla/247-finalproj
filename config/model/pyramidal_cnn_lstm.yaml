@@ -1,0 +1,20 @@
+# @package _global_
+
+module:
+  _target_: emg2qwerty.lightning.CNNPyramidalLSTMCTCModule
+  # NEED TO CHANGE BACK
+  # in_features: 528
+  in_features: 264
+  mlp_features: [384]
+  block_channels: [128, 64, 64]
+  kernel_width: 32
+  lstm_hidden_size: 160        # slightly larger to compensate for time reduction
+  lstm_layers: 2               # 2 layers → reduction factor = 2
+  lstm_dropout: 0.2
+
+
+datamodule:
+  _target_: emg2qwerty.lightning.WindowedEMGDataModule
+
+  window_length: 8000          # 4 sec @ 2kHz
+  padding: [1800, 200]         # past, future context
