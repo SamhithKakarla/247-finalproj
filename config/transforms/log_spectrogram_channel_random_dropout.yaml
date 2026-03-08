@@ -27,12 +27,14 @@ specaug:
 
 
 # YOUR CODE HERE ==============================
-time_stretch:
+channel_dropout:
   _target_: emg2qwerty.transforms.ForEach
   transform:
-    _target_: emg2qwerty.transforms.TimeStretch
-    max_scale: 0.1
+    _target_: emg2qwerty.transforms.RandomChannelDropout
+    drop_prob: 0.1
 # END YOUR CODE HER =====================
+
+
 
 
 transforms:
@@ -40,7 +42,7 @@ transforms:
     - ${to_tensor}
     - ${band_rotation}
     - ${temporal_jitter}
-    - ${time_stretch}
+    - ${channel_dropout}
     - ${logspec}
     - ${specaug}
 

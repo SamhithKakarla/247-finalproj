@@ -700,6 +700,12 @@ class CNNTransformerModule(pl.LightningModule):
         optimizer: DictConfig,
         lr_scheduler: DictConfig,
         decoder: DictConfig,
+
+        transformer_layers: int = 2,
+        transformer_heads: int = 2,
+        dim_feedforward: int = 128,
+        dropout: float = 0.1,
+        max_seq_len: int = 1000,
     ) -> None:
         super().__init__()
         self.save_hyperparameters()
@@ -722,7 +728,12 @@ class CNNTransformerModule(pl.LightningModule):
             CNNTransformerEncoder(
                 num_features=num_features,
                 block_channels=block_channels,
-                kernel_width=kernel_width
+                kernel_width=kernel_width,
+                transformer_layers=transformer_layers,
+                transformer_heads=transformer_heads,
+                dim_feedforward=dim_feedforward,
+                dropout=dropout,
+                max_seq_len=max_seq_len
             ),
             # (T, N, num_classes)
             nn.Linear(num_features, charset().num_classes),
@@ -819,4 +830,5 @@ class CNNTransformerModule(pl.LightningModule):
             optimizer_config=self.hparams.optimizer,
             lr_scheduler_config=self.hparams.lr_scheduler,
         )
+
 # END YOUR CODE HER =====================
