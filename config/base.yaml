@@ -1,6 +1,6 @@
 defaults:
-  - user: single_user_50pct #(change for #4 amount of data)
-  - transforms: log_spectrogram #(change this for freq #5)
+  - user: single_user #(change for #4 amount of data)
+  - transforms: log_spec_same_in1000 #(change this for freq #5)
   - model: cnn_gru_ctc #(change this for diff model)
   - optimizer: adam
   - lr_scheduler: linear_warmup_cosine_annealing
