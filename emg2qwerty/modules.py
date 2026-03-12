@@ -476,7 +476,7 @@ class CNNTransformerEncoder(nn.Module):
         super().__init__()
         self.num_features = num_features
 
-        # --- Small conv block to reduce T and extract local patterns ---
+        # --- CNN ---
         self.cnn = TDSConvEncoder(
             num_features=num_features,
             block_channels=block_channels,
@@ -499,21 +499,20 @@ class CNNTransformerEncoder(nn.Module):
 
     def forward(self, x):
         T, N, F_in = x.shape
-        x_ = self.cnn(x)  # (T_down, N, num_features)
+        x_ = self.cnn(x)
         T_down = x_.shape[0]
 
-        pe = self.positional_encoding  # (max_seq_len, 1, num_features)
+        pe = self.positional_encoding
 
         if T_down <= pe.shape[0]:
-            # Slice for shorter sequence
-            x_ = x_ + pe[:T_down]  # broadcasting along batch dimension
+            x_ = x_ + pe[:T_down]
         else:
             # Repeat for longer sequence
-            repeat_factor = (T_down + pe.shape[0] - 1) // pe.shape[0]  # ceil div
+            repeat_factor = (T_down + pe.shape[0] - 1) // pe.shape[0] 
             pe_extended = pe.repeat(repeat_factor, N, 1)[:T_down, :N, :]
             x_ = x_ + pe_extended
 
-        x_ = x_.permute(1, 0, 2)  # (N, T_down, num_features)
+        x_ = x_.permute(1, 0, 2)
         out = self.transformer(x_)
         out = self.output_norm(out)
         return out.permute(1, 0, 2)

@@ -262,14 +262,13 @@ class TimeStretch:
     max_scale: float = 0.1
 
     def __call__(self, tensor: torch.Tensor) -> torch.Tensor:
-        # tensor shape: (T, C)
         T, C = tensor.shape
 
         scale = 1.0 + np.random.uniform(-self.max_scale, self.max_scale)
         new_T = int(T * scale)
 
         # reshape for interpolation
-        x = tensor.T.unsqueeze(0)  # (1, C, T)
+        x = tensor.T.unsqueeze(0)
 
         x = torch.nn.functional.interpolate(
             x,
@@ -291,6 +290,7 @@ class TimeStretch:
     
 
 @dataclass
+# NOT USED
 class RandomChannelDropout:
     def __init__(self, drop_prob=0.1, channel_dim=-1):
         self.drop_prob = drop_prob
