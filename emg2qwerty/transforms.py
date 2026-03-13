@@ -277,7 +277,7 @@ class TimeStretch:
             align_corners=False,
         )
 
-        x = x.squeeze(0).T  # (T', C)
+        x = x.squeeze(0).T
 
         # keep original length so batching works
         if x.shape[0] > T:

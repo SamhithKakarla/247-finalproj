@@ -750,22 +750,17 @@ class CNNTransformerModule(pl.LightningModule):
         targets = batch["targets"]
         input_lengths = batch["input_lengths"]
         target_lengths = batch["target_lengths"]
-        N = len(input_lengths)  # batch_size
+        N = len(input_lengths)
 
         emissions = self.forward(inputs)
-
-        # Shrink input lengths by an amount equivalent to the conv encoder's
-        # temporal receptive field to compute output activation lengths for CTCLoss.
-        # NOTE: This assumes the encoder doesn't perform any temporal downsampling
-        # such as by striding.
         T_diff = inputs.shape[0] - emissions.shape[0]
         emission_lengths = input_lengths - T_diff
 
         loss = self.ctc_loss(
-            log_probs=emissions,  # (T, N, num_classes)
-            targets=targets.transpose(0, 1),  # (T, N) -> (N, T)
-            input_lengths=emission_lengths,  # (N,)
-            target_lengths=target_lengths,  # (N,)
+            log_probs=emissions,
+            targets=targets.transpose(0, 1),
+            input_lengths=emission_lengths,
+            target_lengths=target_lengths,
         )
 
         # Decode emissions
