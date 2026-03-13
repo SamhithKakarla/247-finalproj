@@ -25,10 +25,10 @@ from emg2qwerty.modules import (
     CNNGRUEncoder,
     CNNLSTMEncoder,
     CNNPyramidalLSTMEncoder,
+    CNNTransformerEncoder,
     MultiBandRotationInvariantMLP,
     SpectrogramNorm,
     TDSConvEncoder,
-    CNNTransformerEncoder,
 )
 from emg2qwerty.transforms import Transform
 
@@ -537,8 +537,6 @@ class CNNPyramidalLSTMCTCModule(pl.LightningModule):
 
     NUM_BANDS: ClassVar[int] = 2
     ELECTRODE_CHANNELS: ClassVar[int] = 16
-    # TODO: UNDO!
-    # ELECTRODE_CHANNELS: ClassVar[int] = 8
 
     def __init__(
         self,
@@ -601,12 +599,6 @@ class CNNPyramidalLSTMCTCModule(pl.LightningModule):
         inputs: torch.Tensor,
         emissions: torch.Tensor,
     ) -> torch.Tensor:
-        """
-        Proper length handling for pyramidal reduction.
-        Assumes CNN does not change time dimension.
-        """
-
-        # If CNN changes time, compute that here explicitly.
         cnn_time_diff = inputs.shape[0] - emissions.shape[0] * self.reduction_factor
         base_lengths = input_lengths - cnn_time_diff
 
@@ -700,7 +692,6 @@ class CNNTransformerModule(pl.LightningModule):
         optimizer: DictConfig,
         lr_scheduler: DictConfig,
         decoder: DictConfig,
-
         transformer_layers: int = 2,
         transformer_heads: int = 2,
         dim_feedforward: int = 128,
@@ -728,7 +719,7 @@ class CNNTransformerModule(pl.LightningModule):
                 transformer_heads=transformer_heads,
                 dim_feedforward=dim_feedforward,
                 dropout=dropout,
-                max_seq_len=max_seq_len
+                max_seq_len=max_seq_len,
             ),
             nn.Linear(num_features, charset().num_classes),
             nn.LogSoftmax(dim=-1),
@@ -824,5 +815,6 @@ class CNNTransformerModule(pl.LightningModule):
             optimizer_config=self.hparams.optimizer,
             lr_scheduler_config=self.hparams.lr_scheduler,
         )
+
 
 # END YOUR CODE HER =====================

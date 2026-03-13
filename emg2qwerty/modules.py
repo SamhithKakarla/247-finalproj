@@ -341,39 +341,26 @@ class CNNLSTMEncoder(nn.Module):
         lstm_dropout: float = 0.2,
     ) -> None:
         super().__init__()
-
-        # CNN front-end (temporal convolution encoder)
         self.cnn = TDSConvEncoder(
             num_features=num_features,
             block_channels=block_channels,
             kernel_width=kernel_width,
         )
-
-        # LSTM back-end
         self.lstm = nn.LSTM(
             input_size=num_features,
             hidden_size=lstm_hidden_size,
             num_layers=lstm_layers,
             bidirectional=True,
-            batch_first=False,  # expects (T, N, F)
+            batch_first=False,
             dropout=lstm_dropout if lstm_layers > 1 else 0.0,
         )
-
-        # Project bidirectional output back to num_features
         self.proj = nn.Linear(lstm_hidden_size * 2, num_features)
         self.norm = nn.LayerNorm(num_features)
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
-        # (T, N, F)
         x = self.cnn(inputs)
-
-        # LSTM output: (T, N, 2 * hidden_size)
         x, _ = self.lstm(x)
-
-        # Project back to original feature dimension
         x = self.proj(x)
-
-        # Stabilize representation
         x = self.norm(x)
 
         return x
@@ -395,15 +382,11 @@ class CNNPyramidalLSTMEncoder(nn.Module):
 
         self.num_features = num_features
         self.lstm_layers = lstm_layers
-
-        # CNN front-end
         self.cnn = TDSConvEncoder(
             num_features=num_features,
             block_channels=block_channels,
             kernel_width=kernel_width,
         )
-
-        # Build pyramidal LSTM stack manually
         self.lstm_stack = nn.ModuleList()
 
         input_dim = num_features
@@ -417,20 +400,14 @@ class CNNPyramidalLSTMEncoder(nn.Module):
                     batch_first=False,
                 )
             )
-
-            # After pyramidal reduction, input dimension doubles
-            input_dim = lstm_hidden_size * 2 * 2  # biLSTM output * concat(2 timesteps)
+            input_dim = lstm_hidden_size * 2 * 2
 
         self.proj = nn.Linear(lstm_hidden_size * 2, num_features)
         self.norm = nn.LayerNorm(num_features)
         self.dropout = nn.Dropout(lstm_dropout)
 
     def _pyramid_reduce(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Reduce time dimension by factor of 2.
-        Input:  (T, N, F)
-        Output: (T//2, N, 2F)
-        """
+        # Halves the dimension
         T, N, F = x.size()
 
         if T % 2 != 0:
@@ -440,21 +417,14 @@ class CNNPyramidalLSTMEncoder(nn.Module):
         return x
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
-        # (T, N, F)
         x = self.cnn(inputs)
 
         for i, lstm in enumerate(self.lstm_stack):
-            # BiLSTM
             x, _ = lstm(x)
-
-            # Apply dropout between layers
             x = self.dropout(x)
-
-            # Apply pyramidal reduction except after last layer
             if i < self.lstm_layers - 1:
                 x = self._pyramid_reduce(x)
 
-        # Project back to original feature dimension
         x = self.proj(x)
         x = self.norm(x)
 
@@ -491,10 +461,14 @@ class CNNTransformerEncoder(nn.Module):
             dropout=dropout,
             batch_first=True,
         )
-        self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=transformer_layers)
+        self.transformer = nn.TransformerEncoder(
+            encoder_layer, num_layers=transformer_layers
+        )
 
         # Positional encoding after conv downsampling
-        self.positional_encoding = nn.Parameter(0.01 * torch.randn(max_seq_len, 1, num_features))
+        self.positional_encoding = nn.Parameter(
+            0.01 * torch.randn(max_seq_len, 1, num_features)
+        )
         self.output_norm = nn.LayerNorm(num_features)
 
     def forward(self, x):
@@ -508,7 +482,7 @@ class CNNTransformerEncoder(nn.Module):
             x_ = x_ + pe[:T_down]
         else:
             # Repeat for longer sequence
-            repeat_factor = (T_down + pe.shape[0] - 1) // pe.shape[0] 
+            repeat_factor = (T_down + pe.shape[0] - 1) // pe.shape[0]
             pe_extended = pe.repeat(repeat_factor, N, 1)[:T_down, :N, :]
             x_ = x_ + pe_extended
 
